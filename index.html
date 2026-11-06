@@ -1,0 +1,466 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мои пары</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f5f8; --card:#ffffff; --ink:#15171c; --muted:#6b7180; --line:#e4e6ec;
+  --accent:#4f46e5; --accent-soft:#eef0ff;
+  --lec:#2563eb; --sem:#0d9488; --prac:#d97706; --exam:#dc2626; --other:#7c3aed;
+  --warn-bg:#fff5e6; --warn:#b45309; --bad-bg:#fdecec; --bad:#b91c1c; --ok:#16a34a;
+  --shadow:0 1px 2px rgba(20,23,30,.05),0 4px 16px rgba(20,23,30,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1115; --card:#171a21; --ink:#e9ebf0; --muted:#8b91a0; --line:#262a33;
+    --accent:#8b8cf8; --accent-soft:#1f2133;
+    --lec:#60a5fa; --sem:#2dd4bf; --prac:#fbbf24; --exam:#f87171; --other:#a78bfa;
+    --warn-bg:#2b2112; --warn:#fbbf24; --bad-bg:#2c1416; --bad:#f87171; --ok:#4ade80;
+    --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:28px 16px 64px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+h1{font-size:28px;font-weight:800;margin:0;letter-spacing:-.02em}
+h2{font-size:16px;font-weight:800;margin:0}
+.sub{color:var(--muted);font-size:13px;margin-top:2px}
+.status{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:#9ca3af}
+.dot.ok{background:#22c55e}.dot.err{background:#ef4444}.dot.load{background:#f59e0b;animation:p 1s infinite}
+@keyframes p{50%{opacity:.3}}
+button,input,select{font:inherit;color:var(--ink)}
+button{cursor:pointer;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:6px 12px;font-size:13px;font-weight:600}
+button:hover{border-color:var(--accent)}
+button.on,button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+input,select{border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:7px 10px;font-size:13px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+
+.next{background:linear-gradient(135deg,var(--accent),#7c3aed);color:#fff;border-radius:18px;padding:20px 22px;margin-bottom:18px;box-shadow:var(--shadow)}
+.next .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.08em;opacity:.8;font-weight:700}
+.next .t{font-size:20px;font-weight:800;margin:6px 0 4px}
+.next .m{font-size:14px;opacity:.9}
+.next .cd{display:inline-block;margin-top:10px;background:rgba(255,255,255,.18);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:700}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:18px;box-shadow:var(--shadow)}
+.panel-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.panel-h .cnt{font-size:12px;color:var(--muted)}
+.hw{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
+.hw:first-child{border-top:0}
+.hw input[type=checkbox]{width:18px;height:18px;margin:2px 0 0;accent-color:var(--accent);flex:none;cursor:pointer;padding:0}
+.hw .body{flex:1;min-width:0}
+.hw .txt{font-weight:600}
+.hw.done .txt{text-decoration:line-through;color:var(--muted)}
+.hw .sm{font-size:12px;color:var(--muted);margin-top:1px}
+.hw .due{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;white-space:nowrap;background:var(--accent-soft);color:var(--accent)}
+.hw .due.soon{background:var(--warn-bg);color:var(--warn)}
+.hw .due.late{background:var(--bad-bg);color:var(--bad)}
+.hw .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:16px;line-height:1}
+.hw .x:hover{color:var(--bad)}
+.hw-test{font-size:10px;font-weight:800;color:var(--exam);border:1px solid var(--exam);border-radius:4px;padding:0 5px;margin-right:6px;vertical-align:1px;text-transform:uppercase;letter-spacing:.04em}
+.add{display:grid;grid-template-columns:1fr 1fr 130px auto;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
+.add input[name=text]{grid-column:1/-1}
+.add label{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted)}
+.muted-link{font-size:12px;color:var(--muted);background:none;border:0;padding:0;text-decoration:underline dotted}
+
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;align-items:center}
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:18px}
+.stat.exam b{color:var(--exam)}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.stat b{display:block;font-size:22px;font-weight:800}
+.stat span{font-size:12px;color:var(--muted)}
+
+.week{margin:26px 0 8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.day{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
+.day.today{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.day.free .dh{border-bottom:0}
+.day.free .c{font-weight:600}
+.dh{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line)}
+.dh .d{font-weight:800}
+.dh .d::first-letter{text-transform:uppercase}
+.dh .c{font-size:12px;color:var(--muted)}
+.tag-today{background:var(--accent);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-left:8px}
+.ev{display:grid;grid-template-columns:84px 1fr;gap:14px;padding:12px 16px;border-top:1px solid var(--line);position:relative}
+.dh + .ev{border-top:0}
+.ev::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:3px;border-radius:0 3px 3px 0;background:var(--k)}
+.ev.past{opacity:.45}
+.ev.now{background:var(--accent-soft)}
+.tm{font-weight:700;font-variant-numeric:tabular-nums;font-size:14px}
+.tm small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.nm{font-weight:700}
+.kind{display:inline-block;font-size:11px;font-weight:700;color:var(--k);border:1px solid var(--k);border-radius:999px;padding:0 8px;margin-left:6px;vertical-align:1px;white-space:nowrap}
+.meta{color:var(--muted);font-size:13px;margin-top:3px}
+.meta a{color:inherit;text-decoration:underline dotted}
+.online{color:var(--sem);font-weight:700}
+.flags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.flag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--warn-bg);color:var(--warn)}
+.flag.bad{background:var(--bad-bg);color:var(--bad)}
+.flag.new{background:var(--accent-soft);color:var(--accent)}
+.ev.cancel .nm{text-decoration:line-through}
+.dayhw{padding:10px 16px 12px;border-top:1px solid var(--line);background:var(--bg)}
+.dayhw .lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:2px}
+.dayhw .hw{padding:5px 0;border:0}
+.empty{text-align:center;color:var(--muted);padding:40px 0}
+footer{margin-top:30px;font-size:12px;color:var(--muted);text-align:center}
+footer a{color:inherit}
+@media (max-width:560px){
+  .ev{grid-template-columns:60px 1fr;gap:10px}
+  h1{font-size:24px}
+  .stats{grid-template-columns:repeat(6,1fr)}
+  .stat{grid-column:span 2}
+  .stat:nth-child(-n+2){grid-column:span 3}
+  .stat b{font-size:18px}
+  .add{grid-template-columns:1fr 1fr}
+  .add select{grid-column:1/-1}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Мои пары</h1>
+      <div class="sub">26.М01-э · до 31 декабря 2026</div>
+    </div>
+    <div class="status"><span class="dot" id="dot"></span><span id="st">загрузка…</span>
+      <button id="refresh" title="Обновить">↻</button></div>
+  </header>
+
+  <div id="next"></div>
+
+  <section class="panel">
+    <div class="panel-h"><h2>Домашка</h2><span class="cnt" id="hwcnt"></span></div>
+    <div id="hwlist"></div>
+    <button class="muted-link" id="toggleDone"></button>
+    <form class="add" id="addForm" autocomplete="off">
+      <input name="text" placeholder="Что сделать (доклад, задачи, прочитать…)" required>
+      <select name="subject" id="subjSel"></select>
+      <input type="date" name="due" required min="2026-09-01" max="2026-12-31">
+      <label><input type="checkbox" name="test" style="width:auto"> тест/КР</label>
+      <button class="primary" type="submit">Добавить</button>
+    </form>
+  </section>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="bar">
+    <button data-f="upcoming" class="on">Предстоящие</button>
+    <button data-f="week">Эта неделя</button>
+    <button data-f="exams">Зачёты и КР</button>
+    <button data-f="all">Весь семестр</button>
+  </div>
+
+  <div id="list"></div>
+  <footer>Данные: <a href="https://timetable.spbu.ru/ECON/StudentGroupEvents/Primary/474511" target="_blank" rel="noopener">timetable.spbu.ru</a> · обновляются при открытии и каждые 30 минут · домашка хранится в этом браузере</footer>
+</div>
+
+<script>
+// ===== Настройки =====
+const GROUP = 474511;
+const FROM = '2026-09-01', TO = '2027-01-01', LAST_DAY = '2026-12-31';
+const API = `https://timetable.spbu.ru/api/v1/groups/${GROUP}/events/${FROM}/${TO}`;
+const ENGLISH_TEACHER = 'Купранец';
+const CACHE_KEY = 'spbu-tt-' + GROUP, SEEN_KEY = 'spbu-tt-seen-' + GROUP, HW_KEY = 'spbu-hw-' + GROUP;
+
+// Какие пары мои
+function isMine(e){
+  const s = e.Subject;
+  if (s.startsWith('Факультатив.')) return false;
+  if (s.startsWith('Электив. Русский') || s.startsWith('Электив. Французский')) return false;
+  if (s.startsWith('Электив. Английский')) return e.EducatorsDisplayText.includes(ENGLISH_TEACHER);
+  return true;
+}
+
+// Ручные правки поверх сайта (то, что преподаватели говорят, а на сайте нет)
+const OVERRIDES = [
+  { date: '2026-11-07', teacher: 'Гагарина', online: true, note: 'Онлайн (сказала преподаватель)' },
+];
+
+// Домашка, записанная заранее. Отметки «сделано» и новые задания хранятся в браузере.
+const SEED_HW = [
+  { id: 's1', due: '2026-11-07', subject: 'Макроэкономика - продвинутый уровень', text: 'Доклад: переводной рубль' },
+  { id: 's2', due: '2026-11-07', subject: 'Макроэкономика - продвинутый уровень', text: 'Тест по теме 3', test: true },
+  { id: 's3', due: '2026-11-13', subject: 'Основы поведенческой экономики', text: 'Задание про финфлюенсеров (переехало с 6 ноября)' },
+  { id: 's4', due: '2026-11-13', subject: 'Основы поведенческой экономики', text: 'Ещё одно ДЗ — Ильина пришлёт' },
+];
+
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k,v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+};
+
+function kindOf(type){
+  const t = (type||'').toLowerCase();
+  if (/зач|экзам|контрол/.test(t)) return ['exam','var(--exam)'];
+  if (t.includes('лекц')) return ['lec','var(--lec)'];
+  if (t.includes('семинар')) return ['sem','var(--sem)'];
+  if (t.includes('практ')) return ['prac','var(--prac)'];
+  return ['other','var(--other)'];
+}
+
+function normalize(json){
+  const out = [], seen = new Set();
+  for (const d of json.Days || []) for (const e of d.DayStudyEvents || []) {
+    if (!isMine(e)) continue;
+    const i = e.Subject.lastIndexOf(', ');
+    const name = (i > 0 ? e.Subject.slice(0, i) : e.Subject).replace(/^Электив\.\s*/, '');
+    const type = i > 0 ? e.Subject.slice(i + 2) : '';
+    let loc = e.LocationsDisplayText || '';
+    const online = /информационно-коммуникационных/.test(loc);
+    if (online) loc = 'Онлайн';
+    const geo = (e.EventLocations||[]).find(l => l.HasGeographicCoordinates);
+    const ev = {
+      start: e.Start, end: e.End, name, type, loc, online,
+      geo: geo ? [geo.Latitude, geo.Longitude] : null,
+      teacher: (e.EducatorsDisplayText||'').replace(/,\s*(доцент|профессор|старший преподаватель|ведущий научный сотрудник|ассистент)/g,''),
+      cancelled: e.IsCancelled, timeCh: e.TimeWasChanged, locCh: e.LocationsWereChanged, eduCh: e.EducatorsWereReassigned
+    };
+    const key = [ev.start, ev.name, ev.type, ev.teacher, ev.loc].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key); ev.id = [ev.start, ev.name, ev.type].join('|');
+    out.push(ev);
+  }
+  return out.sort((a,b) => a.start.localeCompare(b.start));
+}
+
+function applyOverrides(list){
+  return list.map(e => {
+    const o = OVERRIDES.find(o => ymd(e.start) === o.date && (!o.teacher || e.teacher.includes(o.teacher)) && (!o.subject || e.name.includes(o.subject)));
+    if (!o) return e;
+    const c = { ...e, manual: o.note };
+    if (o.online) { c.online = true; c.loc = 'Онлайн'; c.geo = null; }
+    if (o.cancelled) c.cancelled = true;
+    return c;
+  });
+}
+
+let raw = [], events = [], filter = 'upcoming', changedIds = new Set(), showDone = false;
+const $ = id => document.getElementById(id);
+const dt = s => new Date(s); // время с сервера — местное (СПб)
+const hm = s => s.slice(11,16);
+const ymd = s => s.slice(0,10);
+const pad = n => String(n).padStart(2,'0');
+const dstr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const todayStr = () => dstr(new Date());
+const addDays = (s, n) => { const d = new Date(s+'T12:00'); d.setDate(d.getDate()+n); return dstr(d); };
+const mondayOf = s => { const d = new Date(s.slice(0,10)+'T12:00'); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return dstr(d); };
+const fmtDay = s => new Date(s.slice(0,10)+'T12:00').toLocaleDateString('ru-RU',{weekday:'long', day:'numeric', month:'long'});
+const fmtShort = s => new Date(s+'T12:00').toLocaleDateString('ru-RU',{day:'numeric', month:'short'});
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// ===== Домашка =====
+function hwState(){ return store.get(HW_KEY) || { done: {}, removed: {}, custom: [] }; }
+function saveHw(s){ store.set(HW_KEY, s); }
+function allHw(){
+  const s = hwState();
+  return [...SEED_HW, ...s.custom].filter(h => !s.removed[h.id]).map(h => ({ ...h, done: !!s.done[h.id] }))
+    .sort((a,b) => a.due.localeCompare(b.due) || a.id.localeCompare(b.id));
+}
+function dueLabel(due){
+  const diff = Math.round((new Date(due+'T12:00') - new Date(todayStr()+'T12:00')) / 864e5);
+  if (diff < 0) return ['просрочено', 'late'];
+  if (diff === 0) return ['сегодня', 'late'];
+  if (diff === 1) return ['завтра', 'soon'];
+  if (diff <= 3) return [`через ${diff} дн.`, 'soon'];
+  return [fmtShort(due), ''];
+}
+function hwItem(h, compact){
+  const [lbl, cls] = dueLabel(h.due);
+  return `<div class="hw${h.done?' done':''}">
+    <input type="checkbox" data-hw="${esc(h.id)}" ${h.done?'checked':''} title="Сделано">
+    <div class="body"><div class="txt">${h.test?'<span class="hw-test">тест</span>':''}${esc(h.text)}</div>
+    ${compact ? '' : `<div class="sm">${esc(h.subject)}</div>`}</div>
+    ${compact || h.done ? '' : `<span class="due ${cls}">${lbl}</span>`}
+    <button class="x" data-del="${esc(h.id)}" title="Удалить">×</button></div>`;
+}
+function renderHw(){
+  const all = allHw(), open = all.filter(h => !h.done), done = all.filter(h => h.done);
+  const shown = showDone ? all : open;
+  $('hwlist').innerHTML = shown.length ? shown.map(h => hwItem(h)).join('') : '<div class="sm" style="color:var(--muted)">Всё сделано 🎉</div>';
+  $('hwcnt').textContent = open.length ? `${open.length} открыто` : '';
+  $('toggleDone').textContent = done.length ? (showDone ? 'скрыть сделанное' : `показать сделанное (${done.length})`) : '';
+  $('toggleDone').style.display = done.length ? '' : 'none';
+}
+function fillSubjects(){
+  const names = [...new Set(events.map(e => e.name))].sort((a,b) => a.localeCompare(b,'ru'));
+  const sel = $('subjSel'), cur = sel.value;
+  sel.innerHTML = '<option value="">Предмет…</option>' + names.map(n => `<option>${esc(n)}</option>`).join('');
+  if (names.includes(cur)) sel.value = cur;
+}
+$('subjSel').onchange = e => { // дата по умолчанию — следующая пара по предмету
+  const nxt = events.find(ev => ev.name === e.target.value && ymd(ev.start) > todayStr() && !ev.cancelled);
+  if (nxt) $('addForm').due.value = ymd(nxt.start);
+};
+$('addForm').onsubmit = e => {
+  e.preventDefault();
+  const f = e.target, s = hwState();
+  s.custom.push({ id: 'c' + Date.now(), due: f.due.value, subject: f.subject.value || 'Без предмета', text: f.text.value.trim(), test: f.test.checked });
+  saveHw(s); f.reset(); renderAll();
+};
+document.addEventListener('change', e => {
+  const id = e.target.dataset && e.target.dataset.hw; if (!id) return;
+  const s = hwState(); if (e.target.checked) s.done[id] = true; else delete s.done[id];
+  saveHw(s); renderAll();
+});
+document.addEventListener('click', e => {
+  const id = e.target.dataset && e.target.dataset.del; if (!id) return;
+  if (!confirm('Удалить задание?')) return;
+  const s = hwState(); s.removed[id] = true; s.custom = s.custom.filter(h => h.id !== id);
+  saveHw(s); renderAll();
+});
+$('toggleDone').onclick = () => { showDone = !showDone; renderHw(); };
+
+// ===== Расписание =====
+function detectChanges(list){
+  const prev = store.get(SEEN_KEY);
+  const now = {};
+  list.forEach(e => now[e.id] = [e.loc, e.teacher, e.cancelled, e.end].join('|'));
+  changedIds = new Set();
+  if (prev) for (const [id, sig] of Object.entries(now)) if (prev[id] !== sig) changedIds.add(id);
+  store.set(SEEN_KEY, now);
+}
+
+function pluralPair(n){ const m10=n%10, m100=n%100; return n + ' ' + (m10===1&&m100!==11?'пара':(m10>=2&&m10<=4&&(m100<10||m100>=20))?'пары':'пар'); }
+
+function renderSchedule(){
+  const now = new Date(), today = todayStr();
+  const live = events.filter(e => !e.cancelled);
+  const cur = live.find(e => dt(e.start) <= now && dt(e.end) > now);
+  const nxt = live.find(e => dt(e.start) > now);
+  const show = cur || nxt;
+  if (show){
+    let cd;
+    if (cur){ cd = `идёт сейчас · ещё ${Math.ceil((dt(cur.end)-now)/60000)} мин`; }
+    else {
+      const ms = dt(nxt.start)-now, h = Math.floor(ms/3600000), d = Math.floor(h/24);
+      cd = d >= 1 ? `через ${d} дн. ${h%24} ч` : h >= 1 ? `через ${h} ч ${Math.floor(ms/60000)%60} мин` : `через ${Math.ceil(ms/60000)} мин`;
+    }
+    $('next').innerHTML = `<div class="next"><div class="lbl">${cur ? 'Сейчас' : 'Следующая пара'}</div>
+      <div class="t">${esc(show.name)}</div>
+      <div class="m">${esc(fmtDay(show.start))}, ${hm(show.start)}–${hm(show.end)} · ${esc(show.type)}<br>${esc(show.loc)}${show.teacher ? ' · '+esc(show.teacher) : ''}</div>
+      <span class="cd">${cd}</span></div>`;
+  } else $('next').innerHTML = '';
+
+  const mon = mondayOf(today), sun = addDays(mon, 6);
+  const inWeek = live.filter(e => ymd(e.start) >= mon && ymd(e.start) <= sun).length;
+  const left = live.filter(e => dt(e.start) > now).length;
+  const ahead = live.filter(e => dt(e.start) > now);
+  // зачёты без пересдач; КР — из расписания + тесты из домашки
+  const zachety = ahead.filter(e => /^зач[её]т$/i.test(e.type.trim())).length;
+  const kr = ahead.filter(e => /контрол/i.test(e.type)).length
+           + allHw().filter(h => h.test && !h.done && h.due >= today).length;
+  const hwOpen = allHw().filter(h => !h.done).length;
+  $('stats').innerHTML = `<div class="stat"><b>${inWeek}</b><span>пар на этой неделе</span></div>
+    <div class="stat"><b>${left}</b><span>пар до Нового года</span></div>
+    <div class="stat exam"><b>${zachety}</b><span>зачётов впереди</span></div>
+    <div class="stat exam"><b>${kr}</b><span>КР и тестов впереди</span></div>
+    <div class="stat"><b>${hwOpen}</b><span>открытых ДЗ</span></div>`;
+
+  const hw = allHw();
+  const byDay = new Map();
+  events.forEach(e => { const k = ymd(e.start); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(e); });
+
+  // Какие дни показывать
+  let days = [];
+  const range = (a, b) => { for (let d = a; d <= b; d = addDays(d, 1)) days.push(d); };
+  if (filter === 'upcoming') range(today, LAST_DAY);
+  else if (filter === 'week') range(mon, sun);
+  else if (filter === 'all') range(FROM, LAST_DAY);
+  else days = [...new Set([
+      ...events.filter(e => kindOf(e.type)[0]==='exam').map(e => ymd(e.start)),
+      ...hw.filter(h => h.test).map(h => h.due)
+    ])].filter(d => d >= today).sort();
+  const onlyExams = filter === 'exams';
+
+  if (!days.length){ $('list').innerHTML = '<div class="empty">Здесь пусто 🎉</div>'; return; }
+
+  let html = '', lastWeek = '';
+  for (const day of days){
+    let evs = byDay.get(day) || [];
+    if (onlyExams) evs = evs.filter(e => kindOf(e.type)[0]==='exam');
+    const dayHw = hw.filter(h => h.due === day && (!onlyExams || h.test));
+    const m = mondayOf(day);
+    if (m !== lastWeek){
+      html += `<div class="week">${m === mon ? 'Эта неделя · ' : ''}${fmtShort(m)} — ${fmtShort(addDays(m, 6))}</div>`;
+      lastWeek = m;
+    }
+    const isToday = day === today;
+    const n = evs.filter(e => !e.cancelled).length;
+    const free = !evs.length;
+    html += `<section class="day${isToday?' today':''}${free?' free':''}"${isToday?' id="today"':''}>
+      <div class="dh"><span class="d">${esc(fmtDay(day))}${isToday?'<span class="tag-today">сегодня</span>':''}</span><span class="c">${n ? pluralPair(n) : 'пар нет'}</span></div>`;
+    for (const e of evs){
+      const [, color] = kindOf(e.type);
+      const past = dt(e.end) < now, nowing = dt(e.start) <= now && dt(e.end) > now;
+      const flags = [];
+      if (e.cancelled) flags.push('<span class="flag bad">Отменено</span>');
+      if (e.manual) flags.push(`<span class="flag">${esc(e.manual)}</span>`);
+      if (e.timeCh) flags.push('<span class="flag">Время изменено</span>');
+      if (e.locCh) flags.push('<span class="flag">Аудитория изменена</span>');
+      if (e.eduCh) flags.push('<span class="flag">Замена преподавателя</span>');
+      if (changedIds.has(e.id)) flags.push('<span class="flag new">Изменилось с прошлого визита</span>');
+      const loc = e.online ? '<span class="online">Онлайн</span>'
+        : e.geo ? `<a href="https://yandex.ru/maps/?pt=${e.geo[1]},${e.geo[0]}&z=17&l=map" target="_blank" rel="noopener">${esc(e.loc)}</a>`
+        : esc(e.loc);
+      html += `<div class="ev${past?' past':''}${nowing?' now':''}${e.cancelled?' cancel':''}" style="--k:${color}">
+        <div class="tm">${hm(e.start)}<small>${hm(e.end)}</small></div>
+        <div><div class="nm">${esc(e.name)}<span class="kind">${esc(e.type)}</span></div>
+        <div class="meta">${loc}${e.teacher ? ' · ' + esc(e.teacher) : ''}</div>
+        ${flags.length ? `<div class="flags">${flags.join('')}</div>` : ''}</div></div>`;
+    }
+    if (dayHw.length){
+      html += `<div class="dayhw"><div class="lbl">Сдать / подготовить</div>${dayHw.map(h => hwItem({...h, text: h.text + ' · ' + h.subject.replace(/ - продвинутый уровень/,'')}, true)).join('')}</div>`;
+    }
+    html += '</section>';
+  }
+  $('list').innerHTML = html;
+}
+
+function renderAll(){ renderHw(); renderSchedule(); }
+
+function setStatus(kind, text){ $('dot').className = 'dot ' + kind; $('st').textContent = text; }
+const fmtTime = t => new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+
+function setEvents(list){ raw = list; events = applyOverrides(list); fillSubjects(); }
+
+async function load(){
+  setStatus('load', 'обновляю…');
+  try {
+    const r = await fetch(API, {cache:'no-store'});
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const list = normalize(await r.json());
+    if (!list.length) throw new Error('пустой ответ');
+    detectChanges(list);
+    setEvents(list);
+    store.set(CACHE_KEY, {t: Date.now(), events: list});
+    setStatus('ok', 'обновлено ' + fmtTime(Date.now()));
+  } catch (err) {
+    const c = store.get(CACHE_KEY);
+    if (c && !events.length) setEvents(c.events);
+    setStatus('err', (events.length && c ? 'офлайн, кэш от ' + fmtTime(c.t) : 'не удалось загрузить') + ' (' + err.message + ')');
+  }
+  renderAll();
+}
+
+document.querySelectorAll('.bar button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.bar button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on'); filter = b.dataset.f; renderSchedule();
+  if (filter === 'all') document.getElementById('today')?.scrollIntoView({behavior:'smooth', block:'start'});
+});
+$('refresh').onclick = load;
+
+const cached = store.get(CACHE_KEY);
+if (cached) setEvents(cached.events);
+renderAll();
+load();
+setInterval(load, 30*60*1000);
+setInterval(renderSchedule, 60*1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
+</script>
+</body>
+</html>
