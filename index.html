@@ -62,6 +62,7 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .hw .due.late{background:var(--bad-bg);color:var(--bad)}
 .hw .x{border:0;background:none;color:var(--muted);padding:0 4px;font-size:16px;line-height:1}
 .hw .x:hover{color:var(--bad)}
+.hw .x.arm{background:var(--bad);color:#fff;border-radius:6px;font-size:11px;font-weight:700;padding:3px 8px;white-space:nowrap}
 .hw-test{font-size:10px;font-weight:800;color:var(--exam);border:1px solid var(--exam);border-radius:4px;padding:0 5px;margin-right:6px;vertical-align:1px;text-transform:uppercase;letter-spacing:.04em}
 .add{display:grid;grid-template-columns:1fr 1fr 130px auto;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line)}
 .add input[name=text]{grid-column:1/-1}
@@ -75,6 +76,20 @@ input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
 .stat b{display:block;font-size:22px;font-weight:800}
 .stat span{font-size:12px;color:var(--muted)}
 
+.sum summary{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;list-style:none}
+.sum summary::-webkit-details-marker{display:none}
+.sum summary h2::after{content:" ▾";color:var(--muted);font-size:13px}
+.sum[open] summary h2::after{content:" ▴"}
+.sum summary .cnt{font-size:12px;color:var(--muted)}
+.sum[open] summary{margin-bottom:6px}
+.srow{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:10px 0;border-top:1px solid var(--line);align-items:center}
+.srow .sn{font-weight:700}
+.srow .sd{font-size:12px;color:var(--muted);grid-column:1}
+.srow .big{grid-row:1/3;grid-column:2;text-align:right;font-weight:800;font-size:20px;font-variant-numeric:tabular-nums}
+.srow .big small{display:block;font-size:11px;font-weight:600;color:var(--muted)}
+.srow.done{opacity:.5}
+.chip{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:6px;margin:2px 4px 0 0;background:var(--bad-bg);color:var(--bad)}
+.chip.kr{background:var(--warn-bg);color:var(--warn)}
 .week{margin:26px 0 8px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 .day{background:var(--card);border:1px solid var(--line);border-radius:16px;margin-bottom:12px;overflow:hidden;box-shadow:var(--shadow)}
 .day.today{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
@@ -148,10 +163,16 @@ footer a{color:inherit}
 
   <div class="stats" id="stats"></div>
 
+  <details class="panel sum" id="sumBox">
+    <summary><h2>Сводка по предметам</h2><span class="cnt">сколько учебных дней осталось</span></summary>
+    <div id="sumList"></div>
+  </details>
+
   <div class="bar">
     <button data-f="upcoming" class="on">Предстоящие</button>
     <button data-f="week">Эта неделя</button>
-    <button data-f="exams">Зачёты и КР</button>
+    <button data-f="zach">Зачёты</button>
+    <button data-f="kr">КР и тесты</button>
     <button data-f="all">Весь семестр</button>
   </div>
 
@@ -202,6 +223,15 @@ function kindOf(type){
   if (t.includes('практ')) return ['prac','var(--prac)'];
   return ['other','var(--other)'];
 }
+// Вид контроля: 'zach' — зачёт (в т.ч. пересдача), 'kr' — контрольная, иначе null
+function ctrlKind(type){
+  const t = (type||'').toLowerCase();
+  if (/зач[её]т|экзам/.test(t)) return 'zach';
+  if (/контрол/.test(t)) return 'kr';
+  return null;
+}
+const isRetake = type => /пересдач/i.test(type||'');
+const isLesson = type => /лекц|семинар|практ|сам\. работа/i.test(type||'');
 
 function normalize(json){
   const out = [], seen = new Set();
@@ -241,12 +271,13 @@ function applyOverrides(list){
 
 let raw = [], events = [], filter = 'upcoming', changedIds = new Set(), showDone = false;
 const $ = id => document.getElementById(id);
-const dt = s => new Date(s); // время с сервера — местное (СПб)
+const dt = s => new Date(s + '+03:00'); // время с сервера — московское, даже если телефон в другом поясе
 const hm = s => s.slice(11,16);
 const ymd = s => s.slice(0,10);
 const pad = n => String(n).padStart(2,'0');
 const dstr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-const todayStr = () => dstr(new Date());
+const MSK_DATE = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Moscow' });
+const todayStr = () => MSK_DATE.format(new Date()); // YYYY-MM-DD по Москве
 const addDays = (s, n) => { const d = new Date(s+'T12:00'); d.setDate(d.getDate()+n); return dstr(d); };
 const mondayOf = s => { const d = new Date(s.slice(0,10)+'T12:00'); d.setDate(d.getDate() - ((d.getDay()+6)%7)); return dstr(d); };
 const fmtDay = s => new Date(s.slice(0,10)+'T12:00').toLocaleDateString('ru-RU',{weekday:'long', day:'numeric', month:'long'});
@@ -307,17 +338,28 @@ document.addEventListener('change', e => {
   const s = hwState(); if (e.target.checked) s.done[id] = true; else delete s.done[id];
   saveHw(s); renderAll();
 });
+// Удаление: первое нажатие «×» → «Удалить?», второе в течение 3 секунд удаляет
 document.addEventListener('click', e => {
-  const id = e.target.dataset && e.target.dataset.del; if (!id) return;
-  if (!confirm('Удалить задание?')) return;
+  const btn = e.target.closest && e.target.closest('[data-del]'); if (!btn) return;
+  const id = btn.dataset.del;
+  if (!btn.classList.contains('arm')) {
+    document.querySelectorAll('.x.arm').forEach(b => { b.classList.remove('arm'); b.textContent = '×'; });
+    btn.classList.add('arm'); btn.textContent = 'Удалить?';
+    setTimeout(() => { btn.classList.remove('arm'); btn.textContent = '×'; }, 3000);
+    return;
+  }
   const s = hwState(); s.removed[id] = true; s.custom = s.custom.filter(h => h.id !== id);
   saveHw(s); renderAll();
 });
 $('toggleDone').onclick = () => { showDone = !showDone; renderHw(); };
 
 // ===== Расписание =====
+// Сравниваем с тем, что было при прошлом открытии страницы (а не при прошлом автообновлении),
+// чтобы метки «изменилось» не пропадали через 30 минут
+let baseline;
 function detectChanges(list){
-  const prev = store.get(SEEN_KEY);
+  if (baseline === undefined) baseline = store.get(SEEN_KEY);
+  const prev = baseline;
   const now = {};
   list.forEach(e => now[e.id] = [e.loc, e.teacher, e.cancelled, e.end].join('|'));
   changedIds = new Set();
@@ -351,8 +393,8 @@ function renderSchedule(){
   const left = live.filter(e => dt(e.start) > now).length;
   const ahead = live.filter(e => dt(e.start) > now);
   // зачёты без пересдач; КР — из расписания + тесты из домашки
-  const zachety = ahead.filter(e => /^зач[её]т$/i.test(e.type.trim())).length;
-  const kr = ahead.filter(e => /контрол/i.test(e.type)).length
+  const zachety = ahead.filter(e => ctrlKind(e.type) === 'zach' && !isRetake(e.type)).length;
+  const kr = ahead.filter(e => ctrlKind(e.type) === 'kr').length
            + allHw().filter(h => h.test && !h.done && h.due >= today).length;
   const hwOpen = allHw().filter(h => !h.done).length;
   $('stats').innerHTML = `<div class="stat"><b>${inWeek}</b><span>пар на этой неделе</span></div>
@@ -372,18 +414,18 @@ function renderSchedule(){
   else if (filter === 'week') range(mon, sun);
   else if (filter === 'all') range(FROM, LAST_DAY);
   else days = [...new Set([
-      ...events.filter(e => kindOf(e.type)[0]==='exam').map(e => ymd(e.start)),
-      ...hw.filter(h => h.test).map(h => h.due)
+      ...events.filter(e => ctrlKind(e.type) === filter).map(e => ymd(e.start)),
+      ...(filter === 'kr' ? hw.filter(h => h.test).map(h => h.due) : [])
     ])].filter(d => d >= today).sort();
-  const onlyExams = filter === 'exams';
+  const onlyCtrl = filter === 'zach' || filter === 'kr';
 
-  if (!days.length){ $('list').innerHTML = '<div class="empty">Здесь пусто 🎉</div>'; return; }
+  if (!days.length){ $('list').innerHTML = `<div class="empty">${filter === 'zach' ? 'Зачётов впереди нет' : filter === 'kr' ? 'КР и тестов впереди нет' : 'Здесь пусто'} 🎉</div>`; return; }
 
   let html = '', lastWeek = '';
   for (const day of days){
     let evs = byDay.get(day) || [];
-    if (onlyExams) evs = evs.filter(e => kindOf(e.type)[0]==='exam');
-    const dayHw = hw.filter(h => h.due === day && (!onlyExams || h.test));
+    if (onlyCtrl) evs = evs.filter(e => ctrlKind(e.type) === filter);
+    const dayHw = hw.filter(h => h.due === day && (!onlyCtrl || (filter === 'kr' && h.test)));
     const m = mondayOf(day);
     if (m !== lastWeek){
       html += `<div class="week">${m === mon ? 'Эта неделя · ' : ''}${fmtShort(m)} — ${fmtShort(addDays(m, 6))}</div>`;
@@ -391,9 +433,9 @@ function renderSchedule(){
     }
     const isToday = day === today;
     const n = evs.filter(e => !e.cancelled).length;
-    const free = !evs.length;
+    const free = !evs.length && !onlyCtrl;
     html += `<section class="day${isToday?' today':''}${free?' free':''}"${isToday?' id="today"':''}>
-      <div class="dh"><span class="d">${esc(fmtDay(day))}${isToday?'<span class="tag-today">сегодня</span>':''}</span><span class="c">${n ? pluralPair(n) : 'пар нет'}</span></div>`;
+      <div class="dh"><span class="d">${esc(fmtDay(day))}${isToday?'<span class="tag-today">сегодня</span>':''}</span><span class="c">${onlyCtrl ? '' : n ? pluralPair(n) : 'пар нет'}</span></div>`;
     for (const e of evs){
       const [, color] = kindOf(e.type);
       const past = dt(e.end) < now, nowing = dt(e.start) <= now && dt(e.end) > now;
@@ -421,7 +463,38 @@ function renderSchedule(){
   $('list').innerHTML = html;
 }
 
-function renderAll(){ renderHw(); renderSchedule(); }
+function plural(n, one, few, many){ const m10=n%10, m100=n%100; return n + ' ' + (m10===1&&m100!==11?one:(m10>=2&&m10<=4&&(m100<10||m100>=20))?few:many); }
+
+function renderSummary(){
+  const now = new Date();
+  const map = new Map();
+  for (const e of events){
+    if (!map.has(e.name)) map.set(e.name, { name: e.name, days: new Set(), pairs: 0, next: null, ctrl: [] });
+    const s = map.get(e.name);
+    if (e.cancelled || dt(e.end) <= now) continue;
+    const k = ctrlKind(e.type);
+    if (k && !isRetake(e.type)) s.ctrl.push({ k, d: ymd(e.start) });
+    if (isLesson(e.type)) {
+      s.days.add(ymd(e.start)); s.pairs++;
+      if (!s.next) s.next = e.start;
+    }
+  }
+  allHw().filter(h => h.test && !h.done && h.due >= todayStr()).forEach(h => {
+    const s = map.get(h.subject); if (s) s.ctrl.push({ k: 'kr', d: h.due, test: true });
+  });
+  const rows = [...map.values()].sort((a,b) => (b.days.size - a.days.size) || a.name.localeCompare(b.name,'ru'));
+  $('sumList').innerHTML = rows.map(s => {
+    const n = s.days.size;
+    const ctrl = [...new Map(s.ctrl.sort((a,b)=>a.d.localeCompare(b.d)).map(c => [c.k+c.d+(c.test||''), c])).values()]
+      .map(c => `<span class="chip${c.k==='kr'?' kr':''}">${c.k==='zach' ? 'зачёт' : c.test ? 'тест' : 'КР'} ${fmtShort(c.d)}</span>`).join('');
+    const sub = n ? `${plural(s.pairs,'пара','пары','пар')} · следующее ${fmtShort(ymd(s.next))}` : 'занятия закончились';
+    return `<div class="srow${n?'':' done'}"><div class="sn">${esc(s.name.replace(/ - продвинутый уровень/,''))}</div>
+      <div class="big">${n}<small>${plural(n,'день','дня','дней').replace(/^\d+ /,'')}</small></div>
+      <div class="sd">${sub}${ctrl ? '<br>' + ctrl : ''}</div></div>`;
+  }).join('');
+}
+
+function renderAll(){ renderHw(); renderSchedule(); renderSummary(); }
 
 function setStatus(kind, text){ $('dot').className = 'dot ' + kind; $('st').textContent = text; }
 const fmtTime = t => new Date(t).toLocaleString('ru-RU',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
@@ -459,7 +532,7 @@ if (cached) setEvents(cached.events);
 renderAll();
 load();
 setInterval(load, 30*60*1000);
-setInterval(renderSchedule, 60*1000);
+setInterval(() => { renderSchedule(); renderSummary(); }, 60*1000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) renderAll(); });
 </script>
 </body>
